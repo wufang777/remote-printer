@@ -1,0 +1,13 @@
+# macOS and Swift build products
+.DS_Store
+**/.DS_Store
+**/.build/
+**/*.app/
+
+# Node.js dependencies and runtime data
+**/node_modules/
+outputs/RemotePrintRelay/data/
+
+# Local tool state and logs
+**/.superpowers/
+*.log
