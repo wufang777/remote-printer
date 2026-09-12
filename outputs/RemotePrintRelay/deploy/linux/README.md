@@ -11,7 +11,7 @@ cd RemotePrintRelay/deploy/linux
 sudo bash install.sh print.example.com
 ```
 
-安装脚本会安装 Docker 与 Docker Compose，将服务部署到 `/opt/remote-print-relay`，并由 Caddy 自动申请和续期 HTTPS 证书。
+安装脚本会提示设置管理员帐号、管理员密码和 `ADMIN_API_TOKEN`，安装 Docker 与 Docker Compose，将服务部署到 `/opt/remote-print-relay`，并由 Caddy 自动申请和续期 HTTPS 证书。
 
 客户端 API 地址填写：
 

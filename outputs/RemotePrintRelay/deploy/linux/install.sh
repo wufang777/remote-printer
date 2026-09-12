@@ -6,6 +6,15 @@ if [[ -z "$domain" ]]; then
   echo "用法：sudo bash install.sh print.example.com"
   exit 1
 fi
+read -r -p "管理员帐号: " admin_username
+read -r -s -p "管理员密码: " admin_password
+echo
+read -r -s -p "注册码生成密钥 (ADMIN_API_TOKEN): " admin_token
+echo
+if [[ -z "$admin_username" || -z "$admin_password" || -z "$admin_token" ]]; then
+  echo "管理员帐号、密码和注册码生成密钥均不能为空。"
+  exit 1
+fi
 if [[ $EUID -ne 0 ]]; then
   echo "请以 root 或 sudo 运行。"
   exit 1
@@ -24,7 +33,14 @@ mkdir -p "$install_root"
 cp -R "$(cd "$(dirname "$0")/../.." && pwd)" "$install_root/app"
 cp "$(dirname "$0")/docker-compose.yml" "$install_root/docker-compose.yml"
 cp "$(dirname "$0")/Caddyfile" "$install_root/Caddyfile"
-printf 'PRINT_DOMAIN=%s\n' "$domain" > "$install_root/.env"
+cat > "$install_root/.env" <<EOF
+PRINT_DOMAIN=$domain
+PUBLIC_BASE_URL=https://$domain
+ADMIN_USERNAME=$admin_username
+ADMIN_PASSWORD=$admin_password
+ADMIN_API_TOKEN=$admin_token
+EOF
+chmod 600 "$install_root/.env"
 
 cd "$install_root"
 docker compose up -d --build
