@@ -16,6 +16,15 @@ export function createApp({ store, uploadDirectory, publicBaseURL = 'http://127.
   const upload = multer({ dest: uploadDirectory, limits: { fileSize: 25 * 1024 * 1024 } });
   app.use(express.json());
 
+  app.get('/admin', (_req, res) => res.sendFile(resolve('src/admin.html')));
+  app.get('/admin/activation-codes', adminOnly, async (_req, res) => res.json({ codes: await store.listActivationCodes() }));
+  app.post('/admin/activation-codes', adminOnly, async (req, res) => res.status(201).json(await store.createActivationCode(req.body ?? {})));
+  app.post('/admin/activation-codes/batch', adminOnly, async (req, res) => { const count = Math.min(100, Math.max(1, Number(req.body?.count) || 1)); const codes = await Promise.all(Array.from({ length: count }, () => store.createActivationCode(req.body ?? {}))); res.status(201).json({ codes }); });
+  app.post('/admin/activation-codes/:code/enable', adminOnly, async (req, res) => res.json(await store.setActivationCodeEnabled(req.params.code, true)));
+  app.post('/admin/activation-codes/:code/disable', adminOnly, async (req, res) => { try { res.json(await store.disableActivationCode(req.params.code)); } catch { res.status(404).json(error('CODE_NOT_FOUND', '找不到注册码。')); } });
+  app.get('/admin/devices', adminOnly, async (_req, res) => res.json({ devices: await store.listDevices() }));
+  app.get('/admin/jobs', adminOnly, async (_req, res) => res.json({ jobs: (await store.listJobs()).slice(-100).reverse() }));
+
   app.get('/', (_req, res) => res.json({ name: '本地远程打印测试中转站', status: 'online', submit: 'POST /sender/jobs', jobStatus: 'GET /sender/jobs/:taskId' }));
   app.get('/sender/jobs', (_req, res) => res.json({ message: '此接口用于 POST multipart/form-data 上传文件；请使用本地软件、curl 或 Postman 调用。' }));
   app.get('/sender/devices', async (_req, res) => {
@@ -82,6 +91,7 @@ export function createApp({ store, uploadDirectory, publicBaseURL = 'http://127.
 }
 
 function error(code, message) { return { error: { code, message } }; }
+function adminOnly(req, res, next) { const token = process.env.ADMIN_API_TOKEN; if (!token || req.get('Authorization') !== `Bearer ${token}`) return res.status(401).json(error('UNAUTHORIZED', '管理员密钥无效。')); next(); }
 async function authenticatedDevice(req, store) { const token = req.get('Authorization')?.replace(/^Bearer\s+/, ''); return token ? store.getDeviceByToken(token) : undefined; }
 function contentType(fileName) { return fileCategory(fileName); }
 function fileCategory(fileName) {

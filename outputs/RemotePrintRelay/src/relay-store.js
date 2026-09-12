@@ -8,7 +8,13 @@ export class RelayStore {
     return new RelayStore(directory);
   }
 
-  constructor(directory) { this.directory = directory; this.devicesFile = join(directory, 'devices.json'); this.jobsFile = join(directory, 'jobs.json'); }
+  constructor(directory) { this.directory = directory; this.devicesFile = join(directory, 'devices.json'); this.jobsFile = join(directory, 'jobs.json'); this.codesFile = join(directory, 'activation-codes.json'); }
+
+  async createActivationCode({ label = '', expiresAt = null, reusable = false, keyVersion = 1 }) { const codes = await this.#read(this.codesFile, []); const code = `RP-${randomUUID().split('-')[0].toUpperCase()}`; const item = { code, label, expiresAt, reusable, keyVersion, disabled: false, usedBy: [], createdAt: new Date().toISOString() }; codes.push(item); await this.#write(this.codesFile, codes); return item; }
+  async setActivationCodeEnabled(code, enabled) { const codes = await this.#read(this.codesFile, []); const item = codes.find((entry) => entry.code === code); if (!item) throw new Error('CODE_NOT_FOUND'); item.disabled = !enabled; await this.#write(this.codesFile, codes); return item; }
+  async listActivationCodes() { return await this.#read(this.codesFile, []); }
+  async disableActivationCode(code) { const codes = await this.#read(this.codesFile, []); const item = codes.find((entry) => entry.code === code); if (!item) throw new Error('CODE_NOT_FOUND'); item.disabled = true; await this.#write(this.codesFile, codes); return item; }
+  async listJobs() { return await this.#read(this.jobsFile, []); }
 
   async registerDevice({ activationCode, deviceName }) {
     if (!activationCode?.trim() || !deviceName?.trim()) throw new Error('INVALID_DEVICE');
