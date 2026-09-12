@@ -32,7 +32,12 @@ if [[ "$package_manager" == "apt-get" ]]; then
   apt-get update
   apt-get install -y ca-certificates curl git docker.io docker-compose-plugin
 else
-  dnf install -y ca-certificates curl git docker
+  dnf install -y ca-certificates curl git
+  if rpm -q docker-ce-cli >/dev/null 2>&1; then
+    dnf install -y docker-ce containerd.io
+  else
+    dnf install -y docker
+  fi
   architecture="$(uname -m)"
   case "$architecture" in
     x86_64) compose_architecture="x86_64" ;;
