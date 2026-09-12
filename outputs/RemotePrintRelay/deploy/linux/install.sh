@@ -19,13 +19,21 @@ if [[ $EUID -ne 0 ]]; then
   echo "请以 root 或 sudo 运行。"
   exit 1
 fi
-if [[ ! -f /etc/debian_version ]]; then
-  echo "仅支持 Ubuntu 22.04/24.04 或 Debian 12。"
+if [[ -f /etc/debian_version ]]; then
+  package_manager="apt-get"
+elif [[ -f /etc/redhat-release ]] || grep -q '^ID="alinux"' /etc/os-release; then
+  package_manager="dnf"
+else
+  echo "仅支持 Ubuntu/Debian 或 Alibaba Cloud Linux 3。"
   exit 1
 fi
 
-apt-get update
-apt-get install -y ca-certificates curl docker.io docker-compose-plugin
+if [[ "$package_manager" == "apt-get" ]]; then
+  apt-get update
+  apt-get install -y ca-certificates curl git docker.io docker-compose-plugin
+else
+  dnf install -y ca-certificates curl git docker docker-compose-plugin
+fi
 systemctl enable --now docker
 
 install_root="/opt/remote-print-relay"

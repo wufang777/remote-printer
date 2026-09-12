@@ -1,6 +1,6 @@
 # Linux 一键部署
 
-支持 Ubuntu 22.04/24.04 与 Debian 12。服务器需要公网 IP、一个已解析到该 IP 的域名，以及开放的 TCP 80/443 端口。
+支持 Ubuntu 22.04/24.04、Debian 12 与 Alibaba Cloud Linux 3。服务器需要公网 IP、一个已解析到该 IP 的域名，以及开放的 TCP 80/443 端口。
 
 ## 安装
 
