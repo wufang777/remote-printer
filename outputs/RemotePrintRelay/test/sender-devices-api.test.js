@@ -11,7 +11,9 @@ test('lists synchronized printers for a registered device', async (t) => {
   const directory = await mkdtemp(join(tmpdir(), 'relay-devices-'));
   t.after(() => rm(directory, { recursive: true, force: true }));
   const store = await RelayStore.create(join(directory, 'data'));
-  const device = await store.registerDevice({ activationCode: 'RP-1', deviceName: 'Test Mac' });
+  await store.setActivationToken('test-token');
+  const code = await store.createActivationCode({ label: '测试设备' });
+  const device = await store.registerDevice({ activationCode: code.code, deviceName: 'Test Mac' });
   await store.savePrinters(device.deviceId, [{ name: 'Office', isOnline: true, isDefault: true }]);
   const app = createApp({ store, uploadDirectory: join(directory, 'files') });
 

@@ -13,7 +13,9 @@ test('uploads a supported file for a synchronized printer', async (t) => {
   const fixture = join(directory, 'order.pdf');
   await writeFile(fixture, 'PDF test');
   const store = await RelayStore.create(join(directory, 'data'));
-  const device = await store.registerDevice({ activationCode: 'RP-1', deviceName: 'Test Mac' });
+  await store.setActivationToken('test-token');
+  const code = await store.createActivationCode({ label: '测试设备' });
+  const device = await store.registerDevice({ activationCode: code.code, deviceName: 'Test Mac' });
   await store.savePrinters(device.deviceId, [{ name: 'Office', isOnline: true }]);
 
   const response = await request(createApp({ store, uploadDirectory: join(directory, 'files') }))
@@ -30,7 +32,9 @@ test('uploads an Office document for a synchronized printer', async (t) => {
   const fixture = join(directory, '报价单.docx');
   await writeFile(fixture, 'Office test');
   const store = await RelayStore.create(join(directory, 'data'));
-  const device = await store.registerDevice({ activationCode: 'RP-2', deviceName: 'Test Mac' });
+  await store.setActivationToken('test-token');
+  const code = await store.createActivationCode({ label: '测试设备' });
+  const device = await store.registerDevice({ activationCode: code.code, deviceName: 'Test Mac' });
   await store.savePrinters(device.deviceId, [{ name: 'Office', isOnline: true }]);
 
   const response = await request(createApp({ store, uploadDirectory: join(directory, 'files') }))

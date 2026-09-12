@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto';
 import { mkdir, readFile } from 'node:fs/promises';
+import { fileURLToPath } from 'node:url';
 import { extname, join, resolve } from 'node:path';
 import express from 'express';
 import multer from 'multer';
@@ -10,18 +11,43 @@ const supportedCategories = {
   office: new Set(['.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx', '.csv']),
   wps: new Set(['.wps', '.et', '.dps'])
 };
+const adminPagePath = fileURLToPath(new URL('./admin.html', import.meta.url));
 
 export function createApp({ store, uploadDirectory, publicBaseURL = 'http://127.0.0.1:17880' }) {
   const app = express();
   const upload = multer({ dest: uploadDirectory, limits: { fileSize: 25 * 1024 * 1024 } });
   app.use(express.json());
 
-  app.get('/admin', (_req, res) => res.sendFile(resolve('src/admin.html')));
-  app.get('/admin/activation-codes', adminOnly, async (_req, res) => res.json({ codes: await store.listActivationCodes() }));
-  app.post('/admin/activation-codes', adminOnly, async (req, res) => res.status(201).json(await store.createActivationCode(req.body ?? {})));
-  app.post('/admin/activation-codes/batch', adminOnly, async (req, res) => { const count = Math.min(100, Math.max(1, Number(req.body?.count) || 1)); const codes = await Promise.all(Array.from({ length: count }, () => store.createActivationCode(req.body ?? {}))); res.status(201).json({ codes }); });
+  app.get('/admin', (_req, res) => res.sendFile(adminPagePath));
+  app.get('/admin/settings', adminOnly, async (_req, res) => res.json(await store.activationSettings()));
+  app.patch('/admin/settings', adminOnly, async (req, res) => res.json(await store.updateAdminSettings(req.body ?? {})));
+  app.put('/admin/settings/activation-token', adminOnly, async (req, res) => {
+    try { res.json(await store.setActivationToken(req.body?.token)); }
+    catch { res.status(400).json(error('INVALID_ACTIVATION_TOKEN', '请填写至少一个字符的 ADMIN_API_TOKEN。')); }
+  });
+  app.get('/admin/activation-codes', adminOnly, async (req, res) => {
+    const settings = await store.activationSettings();
+    const filter = req.query.filter ?? settings.listFilter;
+    const sort = req.query.sort ?? settings.listSort;
+    const allCodes = (await store.listActivationCodes()).filter((code) => filter === 'deleted' ? Boolean(code.deletedAt) : !code.deletedAt && (filter === 'enabled' ? !code.disabled : filter === 'disabled' ? code.disabled : true));
+    const query = String(req.query.query ?? '').trim().toLowerCase();
+    const filtered = query ? allCodes.filter((code) => `${code.code} ${code.label}`.toLowerCase().includes(query)) : allCodes;
+    filtered.sort((left, right) => sort === 'customer' ? `${left.label}${left.code}`.localeCompare(`${right.label}${right.code}`, 'zh-CN') : sort === 'created_asc' ? left.createdAt.localeCompare(right.createdAt) : right.createdAt.localeCompare(left.createdAt));
+    const pageSize = Math.min(100, Math.max(1, Number(req.query.pageSize) || settings.pageSize));
+    const page = Math.max(1, Number(req.query.page) || 1);
+    res.json({ codes: filtered.slice((page - 1) * pageSize, page * pageSize), total: filtered.length, page, pageSize });
+  });
+  app.post('/admin/activation-codes', adminOnly, async (req, res) => { try { res.status(201).json(await store.createActivationCode(req.body ?? {})); } catch { res.status(409).json(error('ACTIVATION_TOKEN_NOT_CONFIGURED', '请先在后台设置 ADMIN_API_TOKEN。')); } });
+  app.post('/admin/activation-codes/batch', adminOnly, async (req, res) => {
+    const count = Math.min(100, Math.max(1, Number(req.body?.count) || 1));
+    const codes = [];
+    try { for (let index = 0; index < count; index += 1) codes.push(await store.createActivationCode(req.body ?? {})); }
+    catch { return res.status(409).json(error('ACTIVATION_TOKEN_NOT_CONFIGURED', '请先在后台设置 ADMIN_API_TOKEN。')); }
+    res.status(201).json({ codes });
+  });
   app.post('/admin/activation-codes/:code/enable', adminOnly, async (req, res) => res.json(await store.setActivationCodeEnabled(req.params.code, true)));
   app.post('/admin/activation-codes/:code/disable', adminOnly, async (req, res) => { try { res.json(await store.disableActivationCode(req.params.code)); } catch { res.status(404).json(error('CODE_NOT_FOUND', '找不到注册码。')); } });
+  app.delete('/admin/activation-codes/:code', adminOnly, async (req, res) => { try { await store.deleteActivationCode(req.params.code); res.status(204).end(); } catch { res.status(404).json(error('CODE_NOT_FOUND', '找不到注册码。')); } });
   app.get('/admin/devices', adminOnly, async (_req, res) => res.json({ devices: await store.listDevices() }));
   app.get('/admin/jobs', adminOnly, async (_req, res) => res.json({ jobs: (await store.listJobs()).slice(-100).reverse() }));
 
@@ -91,7 +117,15 @@ export function createApp({ store, uploadDirectory, publicBaseURL = 'http://127.
 }
 
 function error(code, message) { return { error: { code, message } }; }
-function adminOnly(req, res, next) { const token = process.env.ADMIN_API_TOKEN; if (!token || req.get('Authorization') !== `Bearer ${token}`) return res.status(401).json(error('UNAUTHORIZED', '管理员密钥无效。')); next(); }
+function adminOnly(req, res, next) {
+  const authorization = req.get('Authorization') ?? '';
+  const token = process.env.ADMIN_API_TOKEN;
+  const username = process.env.ADMIN_USERNAME;
+  const password = process.env.ADMIN_PASSWORD;
+  const expectedBasic = username && password ? `Basic ${Buffer.from(`${username}:${password}`).toString('base64')}` : undefined;
+  if ((token && authorization === `Bearer ${token}`) || (expectedBasic && authorization === expectedBasic)) return next();
+  return res.status(401).json(error('UNAUTHORIZED', '管理员帐号或密码无效。'));
+}
 async function authenticatedDevice(req, store) { const token = req.get('Authorization')?.replace(/^Bearer\s+/, ''); return token ? store.getDeviceByToken(token) : undefined; }
 function contentType(fileName) { return fileCategory(fileName); }
 function fileCategory(fileName) {

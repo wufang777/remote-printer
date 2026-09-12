@@ -11,8 +11,10 @@ test('client can register, synchronize printers, claim a job and report an event
   const directory = await mkdtemp(join(tmpdir(), 'relay-client-'));
   t.after(() => rm(directory, { recursive: true, force: true }));
   const store = await RelayStore.create(join(directory, 'data'));
+  await store.setActivationToken('test-token');
   const app = createApp({ store, uploadDirectory: join(directory, 'files'), publicBaseURL: 'http://127.0.0.1:17880' });
-  const registration = await request(app).post('/v1/devices/register').send({ activationCode: 'RP-1', deviceName: 'Test Mac', platform: 'macOS', appVersion: '0.3.0', osVersion: '14.0' }).expect(200);
+  const code = await store.createActivationCode({ label: '测试设备' });
+  const registration = await request(app).post('/v1/devices/register').send({ activationCode: code.code, deviceName: 'Test Mac', platform: 'macOS', appVersion: '0.3.0', osVersion: '14.0' }).expect(200);
   const { deviceId, accessToken } = registration.body;
   await request(app).put(`/v1/devices/${deviceId}/printers`).set('Authorization', `Bearer ${accessToken}`).send({ printers: [{ name: 'Office', isOnline: true, isDefault: true }] }).expect(204);
   const file = join(directory, 'order.pdf');
