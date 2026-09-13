@@ -38,15 +38,17 @@ else
   else
     dnf install -y docker
   fi
-  architecture="$(uname -m)"
-  case "$architecture" in
-    x86_64) compose_architecture="x86_64" ;;
-    aarch64) compose_architecture="aarch64" ;;
-    *) echo "不支持的 CPU 架构：$architecture"; exit 1 ;;
-  esac
-  install -d -m 0755 /usr/local/lib/docker/cli-plugins
-  curl -fsSL "https://github.com/docker/compose/releases/latest/download/docker-compose-linux-$compose_architecture" -o /usr/local/lib/docker/cli-plugins/docker-compose
-  chmod +x /usr/local/lib/docker/cli-plugins/docker-compose
+  if ! docker compose version >/dev/null 2>&1; then
+    architecture="$(uname -m)"
+    case "$architecture" in
+      x86_64) compose_architecture="x86_64" ;;
+      aarch64) compose_architecture="aarch64" ;;
+      *) echo "不支持的 CPU 架构：$architecture"; exit 1 ;;
+    esac
+    install -d -m 0755 /usr/local/lib/docker/cli-plugins
+    curl -fsSL --http1.1 "https://github.com/docker/compose/releases/latest/download/docker-compose-linux-$compose_architecture" -o /usr/local/lib/docker/cli-plugins/docker-compose
+    chmod +x /usr/local/lib/docker/cli-plugins/docker-compose
+  fi
 fi
 systemctl enable --now docker
 docker compose version
