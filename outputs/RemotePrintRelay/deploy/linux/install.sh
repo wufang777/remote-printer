@@ -57,6 +57,7 @@ install_root="/opt/remote-print-relay"
 mkdir -p "$install_root"
 cp -R "$(cd "$(dirname "$0")/../.." && pwd)" "$install_root/app"
 cp "$(dirname "$0")/docker-compose.yml" "$install_root/docker-compose.yml"
+cp "$(dirname "$0")/docker-compose.bt.yml" "$install_root/docker-compose.bt.yml"
 cp "$(dirname "$0")/Caddyfile" "$install_root/Caddyfile"
 cat > "$install_root/.env" <<EOF
 PRINT_DOMAIN=$domain
@@ -68,8 +69,17 @@ EOF
 chmod 600 "$install_root/.env"
 
 cd "$install_root"
-docker compose up -d --build
+if ss -ltnH 'sport = :80' | grep -q .; then
+  compose_file="docker-compose.bt.yml"
+  echo "检测到 80 端口已被占用，将使用宝塔/Nginx 反向代理部署模式。"
+else
+  compose_file="docker-compose.yml"
+fi
+docker compose -f "$compose_file" up -d --build --remove-orphans
 sleep 3
-docker compose ps
+docker compose -f "$compose_file" ps
 echo "部署完成：https://$domain"
+if [[ "$compose_file" == "docker-compose.bt.yml" ]]; then
+  echo "请在宝塔为 $domain 添加反向代理，目标 URL 填写：http://127.0.0.1:17880"
+fi
 echo "请确保 DNS 已指向本机公网 IP，并开放 TCP 80、443。"

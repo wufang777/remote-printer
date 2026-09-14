@@ -13,6 +13,8 @@ sudo bash install.sh print.example.com
 
 安装脚本会提示设置管理员帐号、管理员密码和 `ADMIN_API_TOKEN`，安装 Docker 与 Docker Compose，将服务部署到 `/opt/remote-print-relay`，并由 Caddy 自动申请和续期 HTTPS 证书。
 
+如果服务器的 80 端口已被宝塔 Nginx 占用，脚本会自动切换为宝塔反向代理模式。安装后，在宝塔中为域名添加反向代理，目标 URL 为 `http://127.0.0.1:17880`，并在宝塔中申请 HTTPS 证书。
+
 客户端 API 地址填写：
 
 ```text

@@ -1,0 +1,20 @@
+services:
+  relay:
+    build:
+      context: ./app
+      dockerfile: deploy/linux/Dockerfile
+    environment:
+      HOST: 0.0.0.0
+      PORT: 17880
+      ADMIN_API_TOKEN: ${ADMIN_API_TOKEN}
+      ADMIN_USERNAME: ${ADMIN_USERNAME}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD}
+      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL}
+    ports:
+      - "127.0.0.1:17880:17880"
+    volumes:
+      - relay-data:/app/data
+    restart: unless-stopped
+
+volumes:
+  relay-data:
