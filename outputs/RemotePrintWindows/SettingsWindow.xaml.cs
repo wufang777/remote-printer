@@ -22,7 +22,19 @@ public partial class SettingsWindow : Window
             MessageBox.Show("请输入以 http:// 或 https:// 开头的 API 地址。", "接入配置");
             return;
         }
-        ConnectionSettingsStore.Save(new ConnectionSettings { ApiBaseUrl = endpoint.ToString().TrimEnd('/'), DeviceName = string.IsNullOrWhiteSpace(DeviceBox.Text) ? "本机远程打印终端" : DeviceBox.Text.Trim(), ActivationCode = CodeBox.Text.Trim(), PrintBehavior = BehaviorBox.SelectedIndex == 1 ? PrintBehavior.Silent : PrintBehavior.Confirm });
+        var previous = ConnectionSettingsStore.Load();
+        var apiBaseUrl = endpoint.ToString().TrimEnd('/');
+        var activationCode = CodeBox.Text.Trim();
+        var credentialsChanged = previous.ApiBaseUrl != apiBaseUrl || previous.ActivationCode != activationCode;
+        ConnectionSettingsStore.Save(new ConnectionSettings {
+            ApiBaseUrl = apiBaseUrl,
+            DeviceName = string.IsNullOrWhiteSpace(DeviceBox.Text) ? "本机远程打印终端" : DeviceBox.Text.Trim(),
+            ActivationCode = activationCode,
+            DeviceId = credentialsChanged ? "" : previous.DeviceId,
+            AccessToken = credentialsChanged ? "" : previous.AccessToken,
+            PollIntervalSeconds = previous.PollIntervalSeconds,
+            PrintBehavior = BehaviorBox.SelectedIndex == 1 ? PrintBehavior.Silent : PrintBehavior.Confirm
+        });
         DialogResult = true;
     }
 

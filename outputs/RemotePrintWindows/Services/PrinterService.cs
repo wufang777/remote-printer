@@ -24,7 +24,7 @@ public sealed class PrinterService
             return;
         }
 
-        if (extension == ".pdf")
+        if (extension is ".pdf" or ".doc" or ".docx" or ".xls" or ".xlsx" or ".ppt" or ".pptx" or ".csv" or ".wps" or ".et" or ".dps")
         {
             Process.Start(new ProcessStartInfo(filePath, $"\"{printerName}\"")
             {
@@ -35,7 +35,7 @@ public sealed class PrinterService
             return;
         }
 
-        throw new NotSupportedException("仅支持 PDF、JPG、JPEG 和 PNG 文件。");
+        throw new NotSupportedException("不支持此打印文件格式。");
     }
 
     private static void PrintImage(string filePath, string printerName)

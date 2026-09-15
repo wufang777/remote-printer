@@ -6,9 +6,12 @@ public enum PrintBehavior { Confirm, Silent }
 
 public sealed class ConnectionSettings
 {
-    public string ApiBaseUrl { get; set; } = "https://api.example.com";
+    public string ApiBaseUrl { get; set; } = "https://print.example.com/v1";
     public string DeviceName { get; set; } = "本机远程打印终端";
     public string ActivationCode { get; set; } = "";
+    public string DeviceId { get; set; } = "";
+    public string AccessToken { get; set; } = "";
+    public int PollIntervalSeconds { get; set; } = 10;
     public PrintBehavior PrintBehavior { get; set; } = PrintBehavior.Confirm;
 }
 

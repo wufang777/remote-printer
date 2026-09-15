@@ -55,10 +55,16 @@ dotnet publish -c Release -r win-x64 --self-contained true -p:PublishSingleFile=
 
 发布产物在 `bin\\Release\\net8.0-windows10.0.19045.0\\win-x64\\publish`。将整个 `publish` 目录复制给测试人员，双击 `RemotePrintWindows.exe` 启动。
 
-## 平台 API 接入
+## 远程 API 接入
 
-Windows 端预留的接入字段和任务模型与 macOS 端保持一致。完整请求、响应和回传状态定义见：
+Windows 端已接入设备注册、打印机同步、轮询领任务、文件下载 SHA-256 校验与状态回传。填写 API 地址时使用完整 v1 地址，例如：
+
+```text
+https://port.ymlabel.com/v1
+```
+
+在服务器后台生成注册码后，Windows 客户端首次保存配置并重启会完成设备注册和打印机同步。远程任务到达后，确认模式会显示“等待确认”；静默模式直接提交打印。完整请求、响应和回传状态定义见：
 
 [`../RemotePrintSimulator/docs/API_V1.md`](../RemotePrintSimulator/docs/API_V1.md)
 
-接入真实平台前，应依次完成设备注册、令牌获取、打印机列表同步、任务领取、文件下载/校验、任务状态回传。第一版 Windows 本地客户端目前先完成本地打印流程，远程轮询/下载将在本地验收通过后按此 API 文档接入。
+Office/WPS 的静默打印依赖目标 Windows 环境已安装可处理对应文件格式的默认应用，建议先用本地文件完成实际打印验收。
